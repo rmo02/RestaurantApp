@@ -42,7 +42,7 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed z-50 w-screen p-3 px-4 md:p-6 md:px-16">
+    <header className="fixed z-50 w-screen p-3 px-4 md:p-6 md:px-16 bg-primary">
       {/* descktop and tablets */}
       <div className="hidden md:flex w-full h-full items-center justify-between">
         <Link to={"/"} className="flex items-center gap-2">
@@ -112,10 +112,19 @@ const Header = () => {
 
       {/* mobile */}
       <div className="flex items-center justify-between md:hidden w-full h-full">
+
+        <div className="relative flex items-center justify-center">
+            <MdShoppingBasket className="text-textColor texte-2xl cursor-pointer" />
+            <div className="absolute -top-4 -right-3 w-5 h-5 rounded-full bg-cartNumBg flex items-center justify-center">
+              <p className="text-xs text-white font-semibold">2</p>
+            </div>
+        </div>
+
         <Link to={"/"} className="flex items-center gap-2">
           <img src={Logo} className="w-10 object-cover" alt="logo" />
           <p className="text-headingColor text-xl font-bold">City</p>
         </Link>
+
         <div className="relative">
           <motion.img
             whileTap={{ scale: 0.6 }}
