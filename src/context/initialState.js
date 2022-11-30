@@ -4,4 +4,5 @@ const userInfo = FechtUser()
 
 export const initialState = {
     user: userInfo,
+    foodItems: null,
 };

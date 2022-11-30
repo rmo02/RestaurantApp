@@ -18,6 +18,7 @@ import {
 } from "firebase/storage";
 import { storage } from "../firebase.config";
 import { actionType } from "../context/reducer";
+import { getAllFoodItems, saveItem } from "../utils/firebaseFunctions";
 
 const CreateContainer = () => {
   const [title, setTitle] = useState("");
@@ -30,6 +31,115 @@ const CreateContainer = () => {
   const [msg, setMsg] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [{ foodItems }, dispatch] = useStateValue();
+
+  const uploadImage = (e) => {
+    setIsLoading(true);
+    const imageFile = e.target.files[0];
+    const storageRef = ref(storage, `Images/${Date.now()}-${imageFile.name}`)
+    const uploadTaks = uploadBytesResumable(storageRef, imageFile);
+
+    uploadTaks.on('state_changed', (snapshot) => {
+      const uploadProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+    },
+    (error) => {
+      console.log(error);
+      setFields(true);
+      setMsg("Erro ao subir a imagem, tente Novamente");
+      setInterval(() => {
+        setFields(false)
+        setIsLoading(false)
+      }, 4000);
+    },
+    () => {
+      getDownloadURL(uploadTaks.snapshot.ref).then(downloadUrl => {
+        setImageAsset(downloadUrl);
+        setIsLoading(false)
+        setFields(true);
+        setMsg("Imagem carregada com sucesso");
+        setAlertStatus("Sucesso")
+        setTimeout(() => {
+          setFields(false)
+        }, 4000);
+      })
+    })
+  };
+
+  const deleteImage = () => {
+    setIsLoading(true);
+    const deleteRef = ref(storage, imageAsset);
+    deleteObject(deleteRef).then(() => {
+      setImageAsset(null)
+      setIsLoading(false)
+      setFields(true);
+        setMsg("Imagem deletada com sucesso");
+        setAlertStatus("Sucesso");
+        setTimeout(() => {
+          setFields(false)
+        }, 4000);
+    })
+  };
+
+  const saveDetails = () => {
+    setIsLoading(true);
+    try {
+      if((!title || !calories || !imageAsset || !price || !categories)){
+        setFields(true);
+        setMsg("Preencher todos os campos");
+        setAlertStatus("danger");
+        setTimeout(() => {
+          setFields(false);
+          setIsLoading(false);
+        }, 4000);
+      } else{
+        const data = {
+          id: `${Date.now()}`,
+          title: title,
+          imageURL: imageAsset,
+          category: category,
+          calories: calories,
+          qty: 1,
+          price: price
+        }
+        saveItem(data)
+        setIsLoading(false);
+        setFields(true);
+        setMsg("Dados upados com sucesso");
+        clearData();
+        setAlertStatus("Sucesso");
+        setTimeout(() => {
+          setFields(false);
+        }, 4000);
+      }
+    } catch (error) {
+      console.log(error);
+      setFields(true);
+      setMsg("Erro ao salvar detalhes, tente novamente");
+      setAlertStatus("danger");
+      setTimeout(() => {
+        setFields(false);
+        setIsLoading(false);
+      }, 4000);
+    }
+
+    fetchData();
+  };
+
+  const clearData = () => {
+    setTitle("");
+    setImageAsset(null);
+    setCalories("");
+    setPrice("");
+    setCategory("Select Category");
+  };
+
+  const fetchData = async() =>{
+    await getAllFoodItems().then(data => {
+      dispatch({
+        type: actionType.SET_FOOD_ITEMS,
+        foodItems: data
+      })
+    });
+  };
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center">
@@ -57,7 +167,7 @@ const CreateContainer = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Digite um título"
-            className="w-full h-full text-lg bg-transparent font-semibold outline-none placeholder:text-gray-400 text-textColor"
+            className="w-full h-full text-lg bg-transparent  outline-none placeholder:text-gray-400 text-textColor"
           />
         </div>
 
@@ -83,9 +193,68 @@ const CreateContainer = () => {
         </div>
 
         <div className="group flex justify-center items-center flex-col boder-2 border-dotted border-gray-300 w-full h-225 md:h-420 cursor-pointer rounded-lg">
-           {isLoading 
-           ? <Loader />
-           : <></>}
+          {isLoading ? (
+            <Loader />
+          ) : (
+            <>
+              {!imageAsset ? (
+                <>
+                  <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer gap-2">
+                    <div className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                      <MdCloudUpload className="text-gray-500 text-3xl hover:text-gray-700" />
+                      <p className="text-gray-500 hover:text-gray-700">
+                        Click here to upload
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      name="uploadimage"
+                      accept="image/*"
+                      onChange={uploadImage}
+                      className="w-0 h-0"
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <div className="relative h-full">
+                    <img src={imageAsset} alt="uploaded image"
+                    className="w-full h-full object-cover" />
+                    <button type="button" 
+                    className="absolute bottom-3 right-3 p-3 rounded-full bg-red-500
+                     text-xl cursor-pointer outline-none hover:shadow-md duration-500
+                      transition-all ease-in-out"
+                      onClick={deleteImage}>
+                        <MdDelete className="text-white"/>
+                      </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="w-full flex flex-col md:flex-row items-center gap-3">
+          <div className="w-full py-2 border-b border-gray-300 flex items-center gap-2">
+              <MdFoodBank className="text-gray-700 texte-2xl"/>
+              <input type="text" value={calories}  onChange={(e) => setCalories(e.target.value)} required placeholder="Calories"
+              className="w-full h-full text-lg bg-transparent outline-none border-none placeholder:text-gray-400 text-textColor"/>
+          </div>
+
+          <div className="w-full py-2 border-b border-gray-300 flex items-center gap-2">
+              <MdAttachMoney className="text-gray-700 texte-2xl"/>
+              <input type="text" value={price}  onChange={(e) => setPrice(e.target.value)} required placeholder="Price"
+              className="w-full h-full text-lg bg-transparent outline-none border-none placeholder:text-gray-400 text-textColor"/>
+          </div>
+        </div>
+
+        <div className="flex items-center w-full">
+          <button type="button"
+          className="ml-0 md:ml-auto w-full md:w-auto border-none outline-none
+           bg-emerald-500 px-12 py-2 rounded-lg text-lg text-white font-semibold"
+           onClick={saveDetails}>
+            Save
+          </button>
         </div>
       </div>
     </div>
