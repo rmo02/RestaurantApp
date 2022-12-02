@@ -41,7 +41,7 @@ $ cd RestaurantApp
 
 
 # Instale as dependências
-$ yarn i
+$ yarn
 
 # Execute a aplicação em modo de desenvolvimento
 $ yarn start
